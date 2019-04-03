@@ -28,10 +28,14 @@
       <input type="checkbox" id="debugMode">
       <button id="update">Update</button>
       <select id="period">
-          <option value="24" selected>Day</option>
-          <option value="12">12 hours</option>
-          <option value="6">6 hours</option>
-          <option value="1">Hour</option>
+        <option value="24" selected>Day</option>
+        <option value="12">12 hours</option>
+        <option value="6">6 hours</option>
+        <option value="1">Hour</option>
+      </select>
+      <select id="pipe">
+        <option value="1" selected>1</option>
+        <option value="12">12</option>
       </select>
       <label>Send</label>
       <input type="checkbox" id="send">
@@ -56,9 +60,25 @@
           socket.emit("clearEmpty", true);
         });
 
+        function dateTimeZIP(yy,mm,dd,h,m,s) {
+          var res=yy;
+          res = res<<4;
+          res+=mm;
+          res = res<<5;
+          res+=dd;
+          res = res<<5;
+          res+=h;
+          res = res<<6;
+          res+=m;
+          res = res<<6;
+          res+=s;
+          return res;
+        }
+        window.dateTimeZIP = dateTimeZIP;
         var lightbox = document.getElementById("send"); 
         lightbox.addEventListener("change", function() { //add event listener for when checkbox changes
-          socket.emit("sendToSerial", this.checked); //send button status to server (as 1 or 0)
+          // socket.emit("sendToSerial", [3,0,12,0,dateTimeZIP(19,3,25,2,42,45)]);
+          socket.emit("sendToSerial", [33,42,1]); //send button status to server (as 1 or 0)
         });
 
         var timerID;

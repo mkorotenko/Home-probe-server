@@ -7,13 +7,13 @@ module.exports = function(port,options) {
         readData: function(callback) {
             port.on('data', function (data) {
                 let str = {
-                    temp: data.readInt16LE(0)/10,
-                    hum: data.readInt16LE(2)/10,
-                    date: new Date(data.readInt32LE(4)*1000),
+                    temp: data.readUInt16LE(0)/10,
+                    hum: data.readUInt16LE(2)/10,
+                    date: data.readUInt32LE(4),
                     serverDate: new Date(),
-                    pipe: data.readInt8(8),
+                    pipe: data.readUInt8(8),
                     tx_res: data.readInt8(9),
-                    bat_v: Math.round(data.readIntLE(10))
+                    bat_v: Math.round(data.readUInt8(10))
                 }
                 callback(str);
             });        

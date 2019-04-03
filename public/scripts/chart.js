@@ -4,7 +4,7 @@ function data(startDate) {
 	  Volt = [];
 
   var xmlHttp = new XMLHttpRequest();
-  var theUrl = '/docs/'+startDate.toISOString();
+  var theUrl = `/docs/${startDate.toISOString()}/${document.getElementById('pipe').value}`;
   xmlHttp.open( "GET", theUrl, false ); // false for synchronous request
   xmlHttp.send( null );
   var probe = JSON.parse(xmlHttp.responseText);
@@ -13,7 +13,7 @@ function data(startDate) {
     let date = new Date(probe[i].date);
     Temp.push({x: date, y: probe[i].temp});
     Hum.push({x: date, y: probe[i].hum});
-    Volt.push({x: date, y: probe[i].bat_v+1.70});// 1.74
+    Volt.push({x: date, y: probe[i].bat_v-0.04});// 1.74
   }
   return [
     {
@@ -78,6 +78,7 @@ function update() {
 
 d3.select("#update").on("click", update);
 d3.select("#period").on("change", update);
+d3.select("#pipe").on("change", update);
 window.chartUpdateRequest(function(){
   update();
 });
