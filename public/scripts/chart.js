@@ -1,4 +1,4 @@
-function data(startDate) {
+function getData(startDate) {
   var Temp = [],
       Hum = [],
 	  Volt = [];
@@ -7,10 +7,13 @@ function data(startDate) {
   var theUrl = `/docs/${startDate.toISOString()}/${document.getElementById('pipe').value}`;
   xmlHttp.open( "GET", theUrl, false ); // false for synchronous request
   xmlHttp.send( null );
-  var probe = JSON.parse(xmlHttp.responseText);
+  var probe = JSON.parse(xmlHttp.responseText).filter(
+    i => i.temp > 8.5 && i.hum <= 100
+  );
 
   for(var i=0; i<probe.length; i++) {
-    let date = new Date(probe[i].date);
+    let date = new Date(probe[i].date.replace('.000Z', '+0200'));
+    //let date = new Date(probe[i].serverDate);
     Temp.push({x: date, y: probe[i].temp});
     Hum.push({x: date, y: probe[i].hum});
     Volt.push({x: date, y: probe[i].bat_v-0.04});// 1.74
@@ -53,7 +56,7 @@ nv.addGraph(function() {
     .tickFormat(d3.format('.01f'));
   
   chartData = d3.select('#chart svg')
-    .datum(data(getStartDate()));
+    .datum(getData(getStartDate()));
   chartData.transition().duration(500)
     .call(chart);
   
@@ -72,13 +75,38 @@ function getStartDate() {
 
 function update() {
   // Update the SVG with the new data and call chart
-  chartData.datum(data(getStartDate())).transition().duration(500).call(chart);
+  chartData.datum(getData(getStartDate())).transition().duration(500).call(chart);
   nv.utils.windowResize(chart.update);
 };
 
 d3.select("#update").on("click", update);
 d3.select("#period").on("change", update);
 d3.select("#pipe").on("change", update);
-window.chartUpdateRequest(function(){
-  update();
+window.chartUpdateRequest(function(data){
+  if (data && data.pipe) {
+    if (data.pipe == document.getElementById('pipe').value) {
+      update();
+    }
+  } else {
+    update();
+  }
 });
+
+window.setPipeDateTime = function(pipe, date) {
+  let d = date || new Date();
+  socket.emit("sendToSerial", [3,0,pipe,0,window.dateTimeZIP(19,d.getMonth()+1,d.getDate(),d.getHours(),d.getMinutes(),d.getSeconds())]);
+}
+window.setPipePeriod = function(pipe, period) {
+  //socket.emit("sendToSerial", [ 5, 0, 12, 0, 597 ]);
+  socket.emit("sendToSerial", [ 5, 0, pipe, 0, period - 3 ]);
+}
+window.setPipeZeroVal = function(pipe, val) {
+  //socket.emit("sendToSerial", [ 4, 0, 12, 0, 120 ])
+  socket.emit("sendToSerial", [ 4, 0, pipe, 0, val ]);
+}
+window.setPipeAddr = function(pipe, addr) {
+  socket.emit("sendToSerial", [ 6, 0, pipe, 0, addr ]);
+}
+window.setPipeDBm = function(pipe, dbm) {
+  socket.emit("sendToSerial", [ 7, 0, pipe, 0, dbm ]);
+}

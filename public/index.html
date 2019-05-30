@@ -34,12 +34,15 @@
         <option value="1">Hour</option>
       </select>
       <select id="pipe">
-        <option value="1" selected>1</option>
-        <option value="12">12</option>
+        <!-- <option value="1" selected>1</option> -->
+        <option value="2">2</option>
+        <option value="3">3</option>
+        <!-- <option value="12">12</option> -->
       </select>
-      <label>Send</label>
-      <input type="checkbox" id="send">
-      <button id="deleteEmpty">Delete empty</button>
+      <!-- <label>Send</label> -->
+      <!-- <input type="checkbox" id="send"> -->
+      <!-- <button id="deleteEmpty">Delete empty</button> -->
+      <!-- <button id="clearPipe">Clear pipe</button> -->
     </p>
     <script src="scripts/socket.io.js"></script> <!-- include socket.io client side script -->
     <script>
@@ -60,6 +63,11 @@
           socket.emit("clearEmpty", true);
         });
 
+        // var clearPipe = document.getElementById("clearPipe");
+        // clearPipe.addEventListener("click", function() {
+        //   socket.emit("clearPipe", {pipe: Number(document.getElementById('pipe').value)});
+        // });
+
         function dateTimeZIP(yy,mm,dd,h,m,s) {
           var res=yy;
           res = res<<4;
@@ -75,6 +83,44 @@
           return res;
         }
         window.dateTimeZIP = dateTimeZIP;
+        function reqData(datetime,pipe) {
+          return new Promise((resolve, reject) => {
+                var xmlhttp = new XMLHttpRequest();
+
+                xmlhttp.onreadystatechange = function() {
+                    if (xmlhttp.readyState == XMLHttpRequest.DONE) {   // XMLHttpRequest.DONE == 4
+                      if (xmlhttp.status == 200) {
+                          //console.info('res: success');
+                resolve(JSON.parse(xmlhttp.responseText));
+                      }
+                      else if (xmlhttp.status == 400) {
+                          console.error('There was an error 400');
+                reject(xmlhttp);
+                      }
+                      else {
+                          console.error('something else other than 200 was returned');
+                reject(xmlhttp);
+                      }
+                    }
+                };
+
+                xmlhttp.open("GET", `docs/${datetime}/${pipe}`, true);
+                xmlhttp.send();
+          })
+        }
+        window.reqData = reqData;
+        function processData(temp4) {
+            let m = temp4.map(i => ({bat_v:i.bat_v, date: (new Date(i.date==='1970-01-01T00:00:00.000Z'? i.serverDate : i.date)).toLocaleDateString()}));
+            let r={};
+            m.forEach(i => {
+              let c = r[i.date] || (r[i.date]={bat_v:0, count:0, volt:0});
+              c.bat_v+=i.bat_v;
+              c.count++;
+              c.volt = Math.round((c.bat_v/c.count)*10000)/10000;
+            });
+          return r;
+        }
+        window.processData = processData;
         var lightbox = document.getElementById("send"); 
         lightbox.addEventListener("change", function() { //add event listener for when checkbox changes
           // socket.emit("sendToSerial", [3,0,12,0,dateTimeZIP(19,3,25,2,42,45)]);
@@ -82,10 +128,10 @@
         });
 
         var timerID;
-        socket.on('newData', function(){
+        socket.on('newData', function(data){
           if (updateCallback && !timerID)
             timerID = setTimeout(function(){
-              updateCallback();
+              updateCallback(data);
               timerID = undefined;
             }, 1500);
         });
