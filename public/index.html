@@ -1,154 +1,16 @@
-<!DOCTYPE html>
-<html>
-  <head>
-    <meta charset="utf-8">
-    <link href="lib/nv.d3.css" rel="stylesheet" type="text/css">
-    <script src="lib/d3.min.js" charset="utf-8"></script>
-    <script src="lib/nv.d3.js"></script>
-    <script src="lib/d3-time-format.min.js"></script>
-    <style>
-      text {
-        font: 12px sans-serif;
-      }
-      svg {
-        display: block;
-      }
-      html, body, svg {
-        margin: 0px;
-        padding: 0px;
-        height: 100%;
-        width: 100%;
-      }
-    </style>
-  </head>
-  <body>
-    <h1 style="margin-top: 0;">DHT Probe</h1>
-    <p>
-      <label>Debug</label>
-      <input type="checkbox" id="debugMode">
-      <button id="update">Update</button>
-      <select id="period">
-        <option value="24" selected>Day</option>
-        <option value="12">12 hours</option>
-        <option value="6">6 hours</option>
-        <option value="1">Hour</option>
-      </select>
-      <select id="pipe">
-        <!-- <option value="1" selected>1</option> -->
-        <option value="2">2</option>
-        <option value="3">3</option>
-        <!-- <option value="12">12</option> -->
-      </select>
-      <!-- <label>Send</label> -->
-      <!-- <input type="checkbox" id="send"> -->
-      <!-- <button id="deleteEmpty">Delete empty</button> -->
-      <!-- <button id="clearPipe">Clear pipe</button> -->
-    </p>
-    <script src="scripts/socket.io.js"></script> <!-- include socket.io client side script -->
-    <script>
-      var socket = io(); //load socket.io-client and connect to the host that serves the page
-      var updateCallback;
-      window.chartUpdateRequest = function(callback) {
-          updateCallback = callback;
-        }
-      window.addEventListener("load", function(){ //when page loads
-        var lightbox = document.getElementById("debugMode"); 
-        lightbox.addEventListener("change", function() { //add event listener for when checkbox changes
-          socket.emit("debugMode", this.checked); //send button status to server (as 1 or 0)
-        });
-        socket.emit("debugMode", lightbox.checked);
-
-        var deleteEmpty = document.getElementById("deleteEmpty");
-        deleteEmpty.addEventListener("click", function() {
-          socket.emit("clearEmpty", true);
-        });
-
-        // var clearPipe = document.getElementById("clearPipe");
-        // clearPipe.addEventListener("click", function() {
-        //   socket.emit("clearPipe", {pipe: Number(document.getElementById('pipe').value)});
-        // });
-
-        function dateTimeZIP(yy,mm,dd,h,m,s) {
-          var res=yy;
-          res = res<<4;
-          res+=mm;
-          res = res<<5;
-          res+=dd;
-          res = res<<5;
-          res+=h;
-          res = res<<6;
-          res+=m;
-          res = res<<6;
-          res+=s;
-          return res;
-        }
-        window.dateTimeZIP = dateTimeZIP;
-        function reqData(datetime,pipe) {
-          return new Promise((resolve, reject) => {
-                var xmlhttp = new XMLHttpRequest();
-
-                xmlhttp.onreadystatechange = function() {
-                    if (xmlhttp.readyState == XMLHttpRequest.DONE) {   // XMLHttpRequest.DONE == 4
-                      if (xmlhttp.status == 200) {
-                          //console.info('res: success');
-                resolve(JSON.parse(xmlhttp.responseText));
-                      }
-                      else if (xmlhttp.status == 400) {
-                          console.error('There was an error 400');
-                reject(xmlhttp);
-                      }
-                      else {
-                          console.error('something else other than 200 was returned');
-                reject(xmlhttp);
-                      }
-                    }
-                };
-
-                xmlhttp.open("GET", `docs/${datetime}/${pipe}`, true);
-                xmlhttp.send();
-          })
-        }
-        window.reqData = reqData;
-        function processData(temp4) {
-            let m = temp4.map(i => ({bat_v:i.bat_v, date: (new Date(i.date==='1970-01-01T00:00:00.000Z'? i.serverDate : i.date)).toLocaleDateString()}));
-            let r={};
-            m.forEach(i => {
-              let c = r[i.date] || (r[i.date]={bat_v:0, count:0, volt:0});
-              c.bat_v+=i.bat_v;
-              c.count++;
-              c.volt = Math.round((c.bat_v/c.count)*10000)/10000;
-            });
-          return r;
-        }
-        window.processData = processData;
-        var lightbox = document.getElementById("send"); 
-        lightbox.addEventListener("change", function() { //add event listener for when checkbox changes
-          // socket.emit("sendToSerial", [3,0,12,0,dateTimeZIP(19,3,25,2,42,45)]);
-          socket.emit("sendToSerial", [33,42,1]); //send button status to server (as 1 or 0)
-        });
-
-        var timerID;
-        socket.on('newData', function(data){
-          if (updateCallback && !timerID)
-            timerID = setTimeout(function(){
-              updateCallback(data);
-              timerID = undefined;
-            }, 1500);
-        });
-      });
-//      socket.on('light', function (data) { //get button status from client
-//        document.getElementById("light").checked = data; //change checkbox according to push button on Raspberry Pi
-//        socket.emit("light", data); //send push button status to back to server
-//      });
-    </script>
-    <style>
-      #chart svg {
-        height: 600px;
-      }
-    </style>  
-    <div id="chart">
-      <svg></svg>
-    </div>
-    <script src="scripts/chart.js"></script>
-  </body>
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>HomeProbeUi</title>
+  <base href="/">
+  <link href="assets/icon.css" rel="stylesheet">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="icon" type="image/x-icon" href="favicon.ico">
+  <!-- <link href="node_modules/nvd3/build/nv.d3.css" rel="stylesheet" type="text/css">
+  <script src="node_modules/nvd3/build/nv.d3.js"></script> -->
+<link rel="stylesheet" href="styles.b9242a889db2c42abb2e.css"></head>
+<body>
+  <app-root></app-root>
+<script type="text/javascript" src="runtime.26209474bfa8dc87a77c.js"></script><script type="text/javascript" src="es2015-polyfills.cac88ae4f6901839703a.js" nomodule></script><script type="text/javascript" src="polyfills.6219b7b5cb5e53954cbf.js"></script><script type="text/javascript" src="main.65a4a32463bcadfbf076.js"></script></body>
 </html>

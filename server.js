@@ -18,8 +18,8 @@ app.use(function(req, res, next) {
 app.get('/', function (req, res, next) {
   res.sendFile(__dirname + '/public/index.html');
 });
-app.get('/about', function (req, res) {
-  res.send('about');
+app.get('/home', function (req, res) {
+  res.sendFile(__dirname + '/public/index.html');
 });
 
 var com = require("./serial-port")('COM3', {
