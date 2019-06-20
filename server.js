@@ -89,8 +89,8 @@ io.on('connection', function (client) {
 });
 
 //start our web server and socket.io server listening
-server.listen(3000, function () {
-  console.log('HTTP server on port 3000');
+server.listen(3200, function () {
+  console.log('HTTP server on port 3200');
 });
 
 var k_v = 0.002315,
