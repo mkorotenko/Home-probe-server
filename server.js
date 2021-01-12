@@ -8,6 +8,9 @@ var db = require("./database")();
 
 var debugMode = false;
 
+var serialName = (process.env && process.env.SERIAL) || 'COM3';
+var port = 3500;//(process.env && process.env.PORT) || 3500;
+
 app.use(express.static(__dirname + '/public'));
 app.use(function(req, res, next) {
   res.header("Access-Control-Allow-Origin", "*");
@@ -21,9 +24,10 @@ app.get('/', function (req, res, next) {
 app.get('/home', function (req, res) {
   res.sendFile(__dirname + '/public/index.html');
 });
-
-var com = require("./serial-port")('COM3', {
-  baudRate: 128000
+ 
+//baudRate: 128000
+var com = require("./serial-port")(serialName, {
+  baudRate: 115200
 });
 
 var eventEmitter = new events.EventEmitter();
@@ -50,35 +54,36 @@ io.on('connection', function (client) {
   });
 
   client.on('sendToSerial', function (data) { //get light switch status from client
-    function toByteArray(_x) {
-      let bytes = [], x = _x;
-      if (!x && typeof x === 'number') {
-        bytes = [0];
-      }
-      while (x) {
-        bytes.push(x & 255);
-        x = x >> 8;
-      };
-      //bytes.reverse();
-      return bytes;
-    };
-    function getArray(n) {
-      res = [];
-      for (let i = 0; i < n; i++) {
-        res.push(0);
-      }
-      return res;
-    };
-    let packet;
-    if (data instanceof Array) {
-      packet = [];
-      data.map(n => toByteArray(n)).forEach(a => packet = [].concat(packet, a));
-    } else {
-      packet = data;
-    }
-    if (packet.length < 8) {
-      packet = [].concat(packet, getArray(8 - packet.length));
-    }
+    // function toByteArray(_x) {
+    //   let bytes = [], x = _x;
+    //   if (!x && typeof x === 'number') {
+    //     bytes = [0];
+    //   }
+    //   while (x) {
+    //     bytes.push(x & 255);
+    //     x = x >> 8;
+    //   };
+    //   //bytes.reverse();
+    //   return bytes;
+    // };
+    // function getArray(n) {
+    //   res = [];
+    //   for (let i = 0; i < n; i++) {
+    //     res.push(0);
+    //   }
+    //   return res;
+    // };
+    // let packet;
+    // if (data instanceof Array) {
+    //   packet = [];
+    //   data.map(n => toByteArray(n)).forEach(a => packet = [].concat(packet, a));
+    // } else {
+    //   packet = data;
+    // }
+    // if (packet.length < 8) {
+    //   packet = [].concat(packet, getArray(8 - packet.length));
+    // }
+    const packet = com.convertObjectToArray(data);
     console.log('sendToSerial:', packet); //turn LED on or off, for now we will just show it in console.log`
     com.writeData(packet);
   });
@@ -89,44 +94,29 @@ io.on('connection', function (client) {
 });
 
 //start our web server and socket.io server listening
-server.listen(3200, function () {
-  console.log('HTTP server on port 3200');
+server.listen(port, function () {
+  console.log(`HTTP server on port ${port}`);
 });
 
-var k_v = 0.002315,
-  v_min = 1132;
-com.readData(function (str) {
+com.readData(function (data) {
+  const pipes = [];
+  if (data && data.length) {
+    data.forEach(str => {
+      // if (debugMode)
+      //   console.info('temp:', str.temp.toFixed(1), ' hum:', str.hum.toFixed(1), ' date ', str.date.toISOString(), ' pipe ', str.pipe, ' rssi ', str.rssi, 'bat_v', str.bat_v);
 
-  str.bat_v = Math.round((str.bat_v * 4 + v_min) * k_v * 100) / 100;
-  let zipDate = str.date;
-  let s, m, h, dd, mm, yy;
-  s = zipDate & 63;
-  zipDate = zipDate >> 6;
-  m = zipDate & 63;
-  zipDate = zipDate >> 6;
-  h = zipDate & 31;
-  zipDate = zipDate >> 5;
-  dd = zipDate & 31;
-  zipDate = zipDate >> 5;
-  mm = zipDate & 15;
-  zipDate = zipDate >> 4;
-  yy = zipDate & 63;
-  str.date = new Date(Date.UTC(2000 + yy, mm - 1, dd, h, m, s));
+      if (!pipes.includes(str.pipe)) {
+        pipes.push(str.pipe);
+      }
+    });
 
-  if (str.pipe === 3) {
-    str.bat_v += 0.11;
-    str.bat_v = Math.round(str.bat_v * 100) / 100
+    db.writeData('probe', data.filter(str => str.pipe != 255));
+    pipes.forEach(pipe => {
+      eventEmitter.emit('newData', { pipe: pipe });
+    });
   }
 
-  if (debugMode)
-    console.info('temp:', str.temp.toFixed(1), ' hum:', str.hum.toFixed(1), ' date ', str.date.toISOString(), ' pipe ', str.pipe, ' tx_res ', str.tx_res, 'bat_v', str.bat_v);
-  var skip = false;
-  prevData = str.date.getTime();
-  if (!skip) {
-    db.writeData('probe', [str]);
-    eventEmitter.emit('newData', { pipe: str.pipe });
-  }
-  com.writeData([2, 0, 0]);
+  //com.writeData([2, 255, 0]);
 })
 app.get('/docs/:docDate/:docPipe', function (req, res) {
   db.readData('probe', {
@@ -138,3 +128,15 @@ app.get('/docs/:docDate/:docPipe', function (req, res) {
     res.json(data);
   });
 });
+
+// function processData(temp4) {
+//   let m = temp4.map(i => ({bat_v:i.bat_v, date: (new Date(i.date==='1970-01-01T00:00:00.000Z'? i.serverDate : i.date)).toLocaleDateString()}));
+//   let r={};
+//   m.forEach(i => {
+//     let c = r[i.date] || (r[i.date]={bat_v:0, count:0, volt:0});
+//     c.bat_v+=i.bat_v;
+//     c.count++;
+//     c.volt = Math.round((c.bat_v/c.count)*10000)/10000;
+//   });
+// return r;
+// }

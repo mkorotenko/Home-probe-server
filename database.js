@@ -19,14 +19,14 @@ const insertDocuments = function(db, table, data, callback) {
 }
 
 module.exports = function() {
-    MongoClient.connect(url, function(err, client) {
+    MongoClient.connect(url, { useNewUrlParser: true }, function(err, client) {
         assert.equal(null, err);
         console.log("MongoDB connected");
         client.close();
     });
     return {
         writeData: function(table, data) {
-            MongoClient.connect(url, function(err, client) {
+            MongoClient.connect(url, { useNewUrlParser: true }, function(err, client) {
                 assert.equal(null, err);
                 //console.log("Connected successfully to server");
         
@@ -38,7 +38,7 @@ module.exports = function() {
             });
         },
         readData: function(table, filter ,callback) {
-            MongoClient.connect(url, function(err, client) {
+            MongoClient.connect(url, { useNewUrlParser: true }, function(err, client) {
                 const db = client.db(dbName);
                 const collection = db.collection(table);
                 collection.find(filter || {})
@@ -49,7 +49,7 @@ module.exports = function() {
             })            
         },
         deleteData: function(table, filter ,callback) {
-          MongoClient.connect(url, function(err, client) {
+          MongoClient.connect(url, { useNewUrlParser: true }, function(err, client) {
             const db = client.db(dbName);
             const collection = db.collection(table);
             collection.deleteMany(filter || {}, callback);
